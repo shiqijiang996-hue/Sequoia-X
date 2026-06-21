@@ -39,7 +39,6 @@ jobs:
 
       - name: 写入 .env
         run: |
-          echo "FEISHU_WEBHOOK_URL=${{ secrets.FEISHU_WEBHOOK_URL }}" >> .env
           echo "EMAIL_SENDER=${{ secrets.EMAIL_SENDER }}" >> .env
           echo "EMAIL_PASSWORD=${{ secrets.EMAIL_PASSWORD }}" >> .env
           echo "EMAIL_RECEIVER=${{ secrets.EMAIL_RECEIVER }}" >> .env
