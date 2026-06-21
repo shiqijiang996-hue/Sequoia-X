@@ -1,0 +1,54 @@
+name: 每日选股
+
+on:
+  schedule:
+    # 北京时间 19:20（UTC时间11:20），工作日运行
+    - cron: '20 11 * * 1-5'
+  workflow_dispatch:  # 允许手动触发
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 安装 uv
+        uses: astral-sh/setup-uv@v3
+
+      - name: 设置 Python
+        run: uv python install 3.12
+
+      - name: 安装依赖
+        run: uv sync
+
+      - name: 恢复数据库缓存
+        uses: actions/cache@v4
+        with:
+          path: data/sequoia_v2.db
+          key: sequoia-db-${{ github.run_id }}
+          restore-keys: |
+            sequoia-db-
+
+      - name: 检查数据库是否存在，不存在则回填
+        run: |
+          if [ ! -f data/sequoia_v2.db ]; then
+            echo "数据库不存在，执行首次回填（约12分钟）..."
+            uv run python main.py --backfill
+          fi
+
+      - name: 写入 .env
+        run: |
+          echo "FEISHU_WEBHOOK_URL=${{ secrets.FEISHU_WEBHOOK_URL }}" >> .env
+          echo "EMAIL_SENDER=${{ secrets.EMAIL_SENDER }}" >> .env
+          echo "EMAIL_PASSWORD=${{ secrets.EMAIL_PASSWORD }}" >> .env
+          echo "EMAIL_RECEIVER=${{ secrets.EMAIL_RECEIVER }}" >> .env
+
+      - name: 运行选股
+        run: uv run python main.py
+
+      - name: 保存数据库缓存
+        uses: actions/cache@v4
+        with:
+          path: data/sequoia_v2.db
+          key: sequoia-db-${{ github.run_id }}
